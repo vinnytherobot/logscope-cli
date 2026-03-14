@@ -1,0 +1,11 @@
+[INFO] Server started
+[INFO] Loading configurations from /etc/app/config.yml
+[WARNING] High memory usage
+[INFO] Incoming request from 192.168.1.104
+[INFO] Redirecting to https://example.com/login
+[ERROR] Database connection failed
+[ERROR] Database connection failed at 2026-03-14 15:30:00
+[INFO] Retrying connection to database in 5 seconds
+[DEBUG] Event loop tick 100ms
+[ERROR] 192.168.1.200 Unauthorized access attempt
+[INFO] Server gracefully shutting down 2026-03-14 16:00:00
