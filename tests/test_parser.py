@@ -12,14 +12,19 @@ def test_parse_error_no_brackets():
     assert entry.message == "Disk space is low."
 
 def test_parse_warning_normalize():
-    entry = parse_line("[WARN] Deprecated feature used.")
-    assert entry.level == "WARNING"
+    entry = parse_line("[WARNING] Deprecated feature used.")
+    assert entry.level == "WARN"
     assert entry.message == "Deprecated feature used."
+
+def test_parse_trace():
+    entry = parse_line("[TRACE] - entering method fn()")
+    assert entry.level == "TRACE"
+    assert entry.message == "entering method fn()"
 
 def test_parse_json_log():
     log_line = '{"timestamp": "2026-03-14T15:30:00", "level": "fatal", "message": "Kernel panic"}'
     entry = parse_line(log_line)
-    assert entry.level == "CRITICAL"
+    assert entry.level == "FATAL"
     assert entry.message == "Kernel panic"
 
 def test_parse_json_log_alternative_keys():

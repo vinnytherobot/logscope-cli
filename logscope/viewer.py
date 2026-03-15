@@ -38,11 +38,15 @@ theme = Theme({
 console = Console(theme=theme, highlighter=LogScopeHighlighter())
 
 LEVEL_MAPPING = {
-    "INFO": ("🔵", "bold blue"),
-    "WARNING": ("🟡", "bold yellow"),
-    "ERROR": ("🔴", "bold red"),
-    "DEBUG": ("🟢", "bold green"),
-    "CRITICAL": ("💥", "bold underline red"),
+    "TRACE": ("🔍", "dim white"), # cinza
+    "DEBUG": ("🐛", "bold blue"), # azul
+    "INFO": ("🔵", "bold green"), # verde
+    "NOTICE": ("🔔", "bold cyan"),
+    "WARN": ("🟡", "bold yellow"), # amarelo
+    "ERROR": ("🔴", "bold red"), # vermelho
+    "CRITICAL": ("💥", "bold magenta"), # roxo
+    "ALERT": ("🚨", "bold color(208)"), # laranja/alerta
+    "FATAL": ("💀", "bold dark_red"), # vermelho escuro
     "UNKNOWN": ("⚪", "dim white")
 }
 
@@ -113,11 +117,15 @@ def run_dashboard(file: TextIO, follow: bool, level_filter: Optional[str] = None
     """Dashboard mode: Shows a summary stats panel and recent logs layout."""
     
     stats = {
+        "FATAL": 0,
+        "ALERT": 0,
+        "CRITICAL": 0,
         "ERROR": 0,
-        "WARNING": 0,
+        "WARN": 0,
+        "NOTICE": 0,
         "INFO": 0,
         "DEBUG": 0,
-        "CRITICAL": 0,
+        "TRACE": 0,
         "UNKNOWN": 0
     }
     
@@ -127,22 +135,28 @@ def run_dashboard(file: TextIO, follow: bool, level_filter: Optional[str] = None
     def generate_layout() -> Layout:
         layout = Layout()
         layout.split_column(
-            Layout(name="header", size=4),
+            Layout(name="header", size=5),
             Layout(name="body")
         )
         
         # Stats table
         table = Table(show_header=False, expand=True, border_style="dim", box=None)
-        table.add_column("Errors", justify="center")
-        table.add_column("Warnings", justify="center")
-        table.add_column("Info", justify="center")
-        table.add_column("Critical", justify="center")
+        table.add_column("C1", justify="center")
+        table.add_column("C2", justify="center")
+        table.add_column("C3", justify="center")
+        table.add_column("C4", justify="center")
         
         table.add_row(
+            f"[bold dark_red]💀 Fatal: {stats.get('FATAL', 0)}[/bold dark_red]",
+            f"[bold magenta]💥 Critical: {stats.get('CRITICAL', 0)}[/bold magenta]",
             f"[bold red]🔴 Errors: {stats.get('ERROR', 0)}[/bold red]",
-            f"[bold yellow]🟡 Warnings: {stats.get('WARNING', 0)}[/bold yellow]",
-            f"[bold blue]🔵 Info: {stats.get('INFO', 0)}[/bold blue]",
-            f"[bold magenta]💥 Critical: {stats.get('CRITICAL', 0)}[/bold magenta]"
+            f"[bold yellow]🟡 Warns: {stats.get('WARN', 0)}[/bold yellow]"
+        )
+        table.add_row(
+            f"[bold green]🔵 Info: {stats.get('INFO', 0)}[/bold green]",
+            f"[bold blue]🐛 Debug: {stats.get('DEBUG', 0)}[/bold blue]",
+            f"[dim white]🔍 Trace: {stats.get('TRACE', 0)}[/dim white]",
+            f"[dim white]⚪ Unknown: {stats.get('UNKNOWN', 0)}[/dim white]"
         )
         
         layout["header"].update(Panel(table, title="[bold]✨ LogScope Live Dashboard[/bold]", border_style="cyan"))

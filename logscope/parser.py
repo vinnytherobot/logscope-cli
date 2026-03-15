@@ -21,26 +21,29 @@ def parse_line(line: str) -> LogEntry:
             # Find message key
             message = str(data.get('message', data.get('msg', data.get('text', line))))
             
-            if level == "WARN": level = "WARNING"
-            if level == "FATAL": level = "CRITICAL"
+            if level == "WARNING": level = "WARN"
+            if level == "EMERGENCY": level = "FATAL"
+            if level == "ERR": level = "ERROR"
             return LogEntry(level=level, message=message, raw=line)
         except json.JSONDecodeError:
             pass
 
     # 2. Try typical log formats like [INFO], (WARN), ERROR:
-    match = re.search(r'\[(INFO|WARN|WARNING|ERROR|DEBUG|CRITICAL|FATAL)\]', line, re.IGNORECASE)
+    match = re.search(r'\[(TRACE|DEBUG|INFO|NOTICE|WARN|WARNING|ERROR|ERR|CRITICAL|ALERT|FATAL|EMERGENCY)\]', line, re.IGNORECASE)
     if not match:
         # Try finding without brackets as a fallback, e.g. "INFO:" or "INFO - "
-        match = re.search(r'\b(INFO|WARN|WARNING|ERROR|DEBUG|CRITICAL|FATAL)\b', line, re.IGNORECASE)
+        match = re.search(r'\b(TRACE|DEBUG|INFO|NOTICE|WARN|WARNING|ERROR|ERR|CRITICAL|ALERT|FATAL|EMERGENCY)\b', line, re.IGNORECASE)
 
     if match:
         level = match.group(1).upper()
         
         # Normalize levels
-        if level == "WARN":
-            level = "WARNING"
-        if level == "FATAL":
-            level = "CRITICAL"
+        if level == "WARNING":
+            level = "WARN"
+        if level == "EMERGENCY":
+            level = "FATAL"
+        if level == "ERR":
+            level = "ERROR"
             
         # Remove the [LEVEL] part from the message for cleaner display
         message = line.replace(match.group(0), '', 1).strip()
