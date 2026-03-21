@@ -1,11 +1,13 @@
 import sys
 import typer
 import re
+import json
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional
 from typing_extensions import Annotated
-from .viewer import stream_logs, run_dashboard
+from .viewer import stream_logs, run_dashboard, manager
+from .themes import DEFAULT_THEMES
 
 app = typer.Typer(
     help="LogScope — Beautiful log viewer for the terminal",
@@ -39,6 +41,40 @@ def parse_relative_time(time_str: str) -> Optional[datetime]:
 
     return None
 
+def load_theme(requested_theme: Optional[str]):
+    """Load theme from config file or use requested/default. Persist if requested."""
+    config_file = Path(".logscoperc")
+    if not config_file.exists():
+        config_file = Path.home() / ".logscoperc"
+
+    config = {}
+    if config_file.exists():
+        try:
+            with open(config_file, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except Exception:
+            pass
+
+    # If requested via CLI, save it to the config for future use
+    if requested_theme:
+        config["theme"] = requested_theme
+        try:
+            # We prefer saving to local .logscoperc if it exists, otherwise home. 
+            # If neither exists, we'll create one in the home directory for persistence.
+            save_path = Path(".logscoperc") if Path(".logscoperc").exists() else Path.home() / ".logscoperc"
+            with open(save_path, "w", encoding="utf-8") as f:
+                json.dump(config, f, indent=4)
+            manager.console.print(f"[bold green]✅ Theme '{requested_theme}' saved as your default preference![/bold green]")
+        except Exception as e:
+            manager.console.print(f"[dim red]⚠️ Failed to save theme preference: {e}[/dim red]")
+    else:
+        requested_theme = config.get("theme", "default")
+
+    if "custom_themes" in config:
+        DEFAULT_THEMES.update(config["custom_themes"])
+
+    manager.apply_theme(requested_theme)
+
 @app.command()
 def main(
     log_file: Annotated[Optional[Path], typer.Argument(help="Path to the log file (leave empty to read from STDIN via pipe)")] = None,
@@ -50,6 +86,7 @@ def main(
     line_numbers: Annotated[bool, typer.Option("--line-numbers", "-n", help="Show line numbers for each log message")] = False,
     since: Annotated[Optional[str], typer.Option("--since", help="Show logs since a point in time (e.g. '1h', '30m', '2026-01-01T00:00:00')")] = None,
     until: Annotated[Optional[str], typer.Option("--until", help="Show logs until a point in time")] = None,
+    theme: Annotated[Optional[str], typer.Option("--theme", "-t", help="Choose a theme for colors and emojis (default, neon, ocean, forest, minimal)")] = None,
 ):
     """
     [blue]LogScope[/blue] parses standard logs and makes them [bold]beautiful[/bold] and [bold]readable[/bold].
@@ -64,6 +101,13 @@ def main(
 
     since_dt = parse_relative_time(since) if since else None
     until_dt = parse_relative_time(until) if until else None
+
+    load_theme(theme)
+
+    # Inform user about themes only if they are using default and haven't hidden the tip by having a config
+    has_config = Path(".logscoperc").exists() or (Path.home() / ".logscoperc").exists()
+    if not theme and not has_config:
+        manager.console.print("[dim]💡 Tip: Use '--theme' or create a '.logscoperc' file to change colors. Themes: neon, ocean, forest, minimal[/dim]\n")
 
     try:
         if dashboard:
