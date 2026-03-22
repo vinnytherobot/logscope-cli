@@ -1,8 +1,9 @@
 import sys
 import time
+import re
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, List, TextIO
+from typing import Optional, List, TextIO, Set, Pattern
 
 from rich.console import Console, Group
 from rich.live import Live
@@ -39,9 +40,11 @@ class LogScopeHighlighter(RegexHighlighter):
 class LogScopeManager:
     """Manages the console state and current theme."""
     def __init__(self, theme_name: str = "default"):
+        self._no_color = False
         self.apply_theme(theme_name)
 
-    def apply_theme(self, theme_name_or_dict):
+    def apply_theme(self, theme_name_or_dict, no_color: bool = False):
+        self._no_color = no_color
         if isinstance(theme_name_or_dict, str):
             theme_config = DEFAULT_THEMES.get(theme_name_or_dict, DEFAULT_THEMES["default"])
         else:
@@ -49,7 +52,11 @@ class LogScopeManager:
 
         self.level_mapping = theme_config["levels"]
         self.rich_theme = Theme(theme_config["highlights"])
-        self.console = Console(theme=self.rich_theme, highlighter=LogScopeHighlighter())
+        self.console = Console(
+            theme=self.rich_theme,
+            highlighter=LogScopeHighlighter(),
+            no_color=no_color,
+        )
 
     def format_log(self, entry: LogEntry, line_number: Optional[int] = None) -> Text:
         """Format a log entry with current theme's colors and emojis."""
@@ -65,6 +72,52 @@ class LogScopeManager:
 
 # Global manager instance
 manager = LogScopeManager()
+
+
+def _normalize_level_token(token: str) -> str:
+    t = token.strip().upper()
+    if t == "WARNING":
+        return "WARN"
+    if t == "ERR":
+        return "ERROR"
+    if t == "EMERGENCY":
+        return "FATAL"
+    return t
+
+
+def parse_level_filter(level: Optional[str]) -> Optional[Set[str]]:
+    if not level or not level.strip():
+        return None
+    parts = {_normalize_level_token(p) for p in level.split(",") if p.strip()}
+    return parts or None
+
+
+def line_passes_level(entry_level: str, allowed: Optional[Set[str]]) -> bool:
+    if not allowed:
+        return True
+    return entry_level in allowed
+
+
+def line_passes_search(
+    line: str,
+    search: Optional[str],
+    *,
+    pattern: Optional[Pattern[str]],
+    use_regex: bool,
+    case_sensitive: bool,
+    invert_match: bool,
+) -> bool:
+    if not search:
+        return True
+    if use_regex and pattern is not None:
+        matched = pattern.search(line) is not None
+    elif case_sensitive:
+        matched = search in line
+    else:
+        matched = search.lower() in line.lower()
+    if invert_match:
+        return not matched
+    return matched
 
 
 def get_lines(file: TextIO, follow: bool):
@@ -91,24 +144,46 @@ def get_lines(file: TextIO, follow: bool):
         return
 
 
-def stream_logs(file: TextIO, follow: bool, level: Optional[str] = None, search: Optional[str] = None, export_html: Optional[Path] = None, show_line_numbers: bool = False, since: Optional[datetime] = None, until: Optional[datetime] = None):
+def stream_logs(
+    file: TextIO,
+    follow: bool,
+    level: Optional[str] = None,
+    search: Optional[str] = None,
+    export_html: Optional[Path] = None,
+    show_line_numbers: bool = False,
+    since: Optional[datetime] = None,
+    until: Optional[datetime] = None,
+    *,
+    use_regex: bool = False,
+    search_pattern: Optional[Pattern[str]] = None,
+    case_sensitive: bool = False,
+    invert_match: bool = False,
+):
     """Basic console mode: prints directly to stdout, supporting tails."""
     if export_html:
         manager.console.record = True
-    
+
+    level_set = parse_level_filter(level)
+
     line_count = 0
     try:
         for line in get_lines(file, follow):
             line_count += 1
             entry = parse_line(line)
-            
-            # Apply filters
-            if level and entry.level != level.upper():
+
+            if not line_passes_level(entry.level, level_set):
                 continue
-                
-            if search and search.lower() not in line.lower():
+
+            if not line_passes_search(
+                line,
+                search,
+                pattern=search_pattern,
+                use_regex=use_regex,
+                case_sensitive=case_sensitive,
+                invert_match=invert_match,
+            ):
                 continue
-                
+
             if entry.timestamp:
                 if since and entry.timestamp.replace(tzinfo=None) < since.replace(tzinfo=None):
                     continue
@@ -123,9 +198,24 @@ def stream_logs(file: TextIO, follow: bool, level: Optional[str] = None, search:
             manager.console.print(f"\n[bold green]✅ Logs exported successfully to {export_html}[/bold green]")
 
 
-def run_dashboard(file: TextIO, follow: bool, level_filter: Optional[str] = None, search_filter: Optional[str] = None, show_line_numbers: bool = False, since: Optional[datetime] = None, until: Optional[datetime] = None):
+def run_dashboard(
+    file: TextIO,
+    follow: bool,
+    level_filter: Optional[str] = None,
+    search_filter: Optional[str] = None,
+    show_line_numbers: bool = False,
+    since: Optional[datetime] = None,
+    until: Optional[datetime] = None,
+    *,
+    use_regex: bool = False,
+    search_pattern: Optional[Pattern[str]] = None,
+    case_sensitive: bool = False,
+    invert_match: bool = False,
+):
     """Dashboard mode: Shows a summary stats panel and recent logs layout."""
-    
+
+    level_set = parse_level_filter(level_filter)
+
     stats = {
         "FATAL": 0,
         "ALERT": 0,
@@ -188,13 +278,19 @@ def run_dashboard(file: TextIO, follow: bool, level_filter: Optional[str] = None
         with Live(generate_layout(), console=manager.console, refresh_per_second=10) as live:
             for line in get_lines(file, follow):
                 entry = parse_line(line)
-                
-                # Apply filters
-                if level_filter and entry.level != level_filter.upper():
+
+                if not line_passes_level(entry.level, level_set):
                     continue
-                if search_filter and search_filter.lower() not in line.lower():
+                if not line_passes_search(
+                    line,
+                    search_filter,
+                    pattern=search_pattern,
+                    use_regex=use_regex,
+                    case_sensitive=case_sensitive,
+                    invert_match=invert_match,
+                ):
                     continue
-                    
+
                 if entry.timestamp:
                     if since and entry.timestamp.replace(tzinfo=None) < since.replace(tzinfo=None):
                         continue
