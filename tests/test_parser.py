@@ -37,3 +37,15 @@ def test_parse_unknown():
     entry = parse_line("Just some random text without a level")
     assert entry.level == "UNKNOWN"
     assert entry.message == "Just some random text without a level"
+
+
+def test_parse_json_observability_fields():
+    log_line = (
+        '{"level":"error","message":"timeout","service":"checkout-api",'
+        '"trace_id":"abcd1234efgh5678ijklmnop","span_id":"span99"}'
+    )
+    entry = parse_line(log_line)
+    assert entry.level == "ERROR"
+    assert entry.service == "checkout-api"
+    assert entry.trace_id == "abcd1234efgh5678ijklmnop"
+    assert entry.span_id == "span99"

@@ -2,7 +2,7 @@ import re
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Tuple
 
 @dataclass
 class LogEntry:
@@ -10,6 +10,46 @@ class LogEntry:
     message: str
     raw: str
     timestamp: Optional[datetime] = None
+    service: Optional[str] = None
+    trace_id: Optional[str] = None
+    span_id: Optional[str] = None
+
+
+def _extract_json_observability(data: dict) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """Pull service / trace / span from common JSON log shapes (K8s, OTel, Docker)."""
+    k8s = data.get("kubernetes")
+    k8s_d: dict = k8s if isinstance(k8s, dict) else {}
+    pod_name = k8s_d.get("pod_name")
+    if not pod_name and isinstance(k8s_d.get("pod"), dict):
+        pod_name = k8s_d["pod"].get("name")
+
+    service = (
+        data.get("service")
+        or data.get("service.name")
+        or data.get("service_name")
+        or pod_name
+        or k8s_d.get("container_name")
+        or data.get("container")
+        or data.get("container.name")
+        or data.get("logger")
+        or data.get("logger.name")
+    )
+    if service is not None:
+        service = str(service)
+
+    trace_id = data.get("trace_id") or data.get("traceId") or data.get("trace.id")
+    if not trace_id and isinstance(data.get("trace"), dict):
+        trace_id = data["trace"].get("id")
+    if not trace_id and isinstance(data.get("otelTraceID"), str):
+        trace_id = data["otelTraceID"]
+    if trace_id is not None:
+        trace_id = str(trace_id)
+
+    span_id = data.get("span_id") or data.get("spanId") or data.get("span.id")
+    if span_id is not None:
+        span_id = str(span_id)
+
+    return service, trace_id, span_id
 
 def parse_line(line: str) -> LogEntry:
     """Parse a single line of log and extract severity level."""
@@ -37,7 +77,16 @@ def parse_line(line: str) -> LogEntry:
             if level == "WARNING": level = "WARN"
             if level == "EMERGENCY": level = "FATAL"
             if level == "ERR": level = "ERROR"
-            return LogEntry(level=level, message=message, raw=line, timestamp=timestamp)
+            svc, tid, sid = _extract_json_observability(data)
+            return LogEntry(
+                level=level,
+                message=message,
+                raw=line,
+                timestamp=timestamp,
+                service=svc,
+                trace_id=tid,
+                span_id=sid,
+            )
         except json.JSONDecodeError:
             pass
 

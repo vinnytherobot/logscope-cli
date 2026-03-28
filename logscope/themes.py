@@ -130,5 +130,31 @@ DEFAULT_THEMES = {
             "logscope.status_err": "red",
             "logscope.method": "bold"
         }
-    }
+    },
+    "spectra": {
+        "levels": {
+            "TRACE": ("◦", "dim cyan"),
+            "DEBUG": ("◇", "cyan"),
+            "INFO": ("◆", "bold bright_cyan"),
+            "NOTICE": ("▹", "bold turquoise2"),
+            "WARN": ("⚠", "bold bright_yellow"),
+            "ERROR": ("✖", "bold bright_red"),
+            "CRITICAL": ("⬢", "bold magenta"),
+            "ALERT": ("⚡", "bold color(214)"),
+            "FATAL": ("☠", "bold red3"),
+            "UNKNOWN": ("·", "dim white")
+        },
+        "highlights": {
+            "logscope.ip": "bold bright_cyan",
+            "logscope.url": "underline bright_magenta",
+            "logscope.timestamp": "bold cyan",
+            "logscope.uuid": "bold bright_white",
+            "logscope.email": "underline turquoise2",
+            "logscope.path": "italic cyan",
+            "logscope.status_ok": "bold spring_green1",
+            "logscope.status_warn": "bold gold1",
+            "logscope.status_err": "bold red1",
+            "logscope.method": "bold deep_sky_blue1"
+        }
+    },
 }

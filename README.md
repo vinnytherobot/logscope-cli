@@ -25,7 +25,11 @@
 *   **Auto-Highlighting**: Magically highlights `IPs`, `URLs`, `Dates/Timestamps`, `UUIDs`, and `E-Mails` with dynamic colors.
 *   **Live Dashboard**: Watch logs stream in real-time alongside a live statistics panel keeping track of Error vs Info counts (`--dashboard`).
 *   **HTML Export**: Loved your console output so much you want to share it? Export the beautiful log structure directly to an HTML file to share with your team! (`--export-html results.html`)
-*   **Filtering**: Filter by one or more levels (`--level ERROR` or `--level ERROR,WARN,INFO`). Search by substring (`--search`) or regular expression (`--regex` / `-e`), with optional **case-sensitive** matching and **invert match** (`--invert-match` / `-v`, grep-style) to hide matching lines.
+*   **Filtering**: Filter by one or more levels (`--level ERROR` or `--level ERROR,WARN,INFO`), or by **minimum severity** with `--min-level` (e.g. `WARN` shows `WARN` and everything more severe). Do not combine `--level` and `--min-level` in the same run. Search by substring (`--search`) or regular expression (`--regex` / `-e`), with optional **case-sensitive** matching and **invert match** (`--invert-match` / `-v`, grep-style) to hide matching lines.
+*   **JSON observability fields**: For single-line JSON logs, LogScope extracts common DevOps fields when present—**service** (e.g. `service`, `service.name`, Kubernetes `pod` / container names), **trace** (`trace_id`, `traceId`, nested `trace.id`), and **span** (`span_id`, `spanId`)—and shows them as a compact dim prefix before the message (truncated trace/span when very long).
+*   **Pulse Signal Deck** (`--pulse`): Full-screen live view with a bottom **Signal Deck**—instant and average lines/sec, a rolling **signal %** health score based on severe lines (`ERROR`, `CRITICAL`, `ALERT`, `FATAL`), and an ASCII **sparkline** for severity bursts. Ideal with `--follow`. Not compatible with `--dashboard` or `--export-html`.
+*   **Themes**: Built-in themes include `default`, `neon`, `ocean`, `forest`, `minimal`, and **`spectra`** (cyan/magenta, geometric icons). Use `--theme` / `-t` or persist via `.logscoperc` (see CLI help).
+*   **Version**: `logscope --version` or `logscope -V` prints the installed package version.
 *   **Plain output**: Use `--no-color` when you need unstyled text (e.g. piping to other tools or logs without ANSI codes).
 *   **Gzip logs**: Read `.gz` files directly—LogScope opens them as text without a manual `zcat` pipe.
 
@@ -66,6 +70,12 @@ logscope production.log --level ERROR
 # Multiple levels (comma-separated)
 logscope production.log --level ERROR,WARN,INFO
 
+# Minimum severity (shows this level and all more severe; do not use with --level)
+logscope production.log --min-level WARN
+
+# Show version
+logscope --version
+
 # Search text dynamically
 logscope server.log --search "Connection Timeout"
 
@@ -99,6 +109,23 @@ Monitor your logs like a pro with a live dashboard tracking error occurrences.
 
 ```bash
 logscope app.log --dashboard --follow
+```
+
+### Pulse Signal Deck (full-screen live HUD)
+Use **Pulse** for a terminal “heads-up” layout: scrolling recent lines plus a live **Signal Deck** (throughput, health %, sparkline). Combine with `--follow` for streaming sources.
+
+```bash
+logscope app.log --pulse
+logscope app.log --follow --pulse --min-level INFO
+kubectl logs -f deploy/api | logscope --pulse --theme spectra
+```
+
+**Note:** `--pulse` cannot be used together with `--dashboard` or `--export-html`.
+
+### Themes (including Spectra)
+```bash
+logscope app.log --theme spectra
+logscope app.log -t ocean
 ```
 
 ### Exporting to HTML
