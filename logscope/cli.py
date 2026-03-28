@@ -118,7 +118,7 @@ def main(
 
             v = pkg_version("logscope")
         except Exception:
-            v = "0.1.0"
+            v = "0.2.0"
         typer.echo(f"logscope {v}")
         raise typer.Exit(0)
 
