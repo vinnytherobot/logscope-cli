@@ -1,5 +1,4 @@
-import pytest
-from logscope.parser import parse_line, LogEntry
+from logscope.parser import parse_line
 
 def test_parse_info_brackets():
     entry = parse_line("[INFO] System up and running.")

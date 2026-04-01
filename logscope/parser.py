@@ -74,9 +74,12 @@ def parse_line(line: str) -> LogEntry:
                 except ValueError:
                     pass
 
-            if level == "WARNING": level = "WARN"
-            if level == "EMERGENCY": level = "FATAL"
-            if level == "ERR": level = "ERROR"
+            if level == "WARNING":
+                level = "WARN"
+            if level == "EMERGENCY":
+                level = "FATAL"
+            if level == "ERR":
+                level = "ERROR"
             svc, tid, sid = _extract_json_observability(data)
             return LogEntry(
                 level=level,

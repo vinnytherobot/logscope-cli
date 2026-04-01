@@ -1,5 +1,4 @@
-import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from logscope.parser import parse_line
 from logscope.cli import parse_relative_time
 
