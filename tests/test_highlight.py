@@ -1,6 +1,5 @@
 """Tests for custom keyword highlighting feature."""
 
-import pytest
 from logscope.viewer import manager
 from logscope.parser import LogEntry
 

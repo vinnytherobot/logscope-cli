@@ -35,10 +35,14 @@ def parse_relative_time(time_str: str) -> Optional[datetime]:
     value, unit = int(match.group(1)), match.group(2)
     now = datetime.now()
 
-    if unit == 's': return now - timedelta(seconds=value)
-    if unit == 'm': return now - timedelta(minutes=value)
-    if unit == 'h': return now - timedelta(hours=value)
-    if unit == 'd': return now - timedelta(days=value)
+    if unit == 's':
+        return now - timedelta(seconds=value)
+    if unit == 'm':
+        return now - timedelta(minutes=value)
+    if unit == 'h':
+        return now - timedelta(hours=value)
+    if unit == 'd':
+        return now - timedelta(days=value)
 
     return None
 

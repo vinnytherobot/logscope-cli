@@ -1,6 +1,5 @@
 import sys
 import time
-import re
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, TextIO, Set, Pattern
@@ -151,7 +150,7 @@ def get_lines(file: TextIO, follow: bool):
         return
 
     # tailing
-    manager.console.print(f"[dim]-- 🔭 Tailing new logs... (Press Ctrl+C to exit) --[/dim]")
+    manager.console.print("[dim]-- 🔭 Tailing new logs... (Press Ctrl+C to exit) --[/dim]")
     try:
         while True:
             line = file.readline()
