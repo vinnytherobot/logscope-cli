@@ -7,14 +7,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional
 from typing_extensions import Annotated
-from .viewer import (
-    stream_logs,
-    run_dashboard,
-    run_pulse_stream,
-    manager,
-    parse_min_level,
-    LEVEL_ORDER,
-)
+from .viewer import stream_logs, run_dashboard, manager
 from .themes import DEFAULT_THEMES
 
 app = typer.Typer(
@@ -42,14 +35,10 @@ def parse_relative_time(time_str: str) -> Optional[datetime]:
     value, unit = int(match.group(1)), match.group(2)
     now = datetime.now()
 
-    if unit == "s":
-        return now - timedelta(seconds=value)
-    if unit == "m":
-        return now - timedelta(minutes=value)
-    if unit == "h":
-        return now - timedelta(hours=value)
-    if unit == "d":
-        return now - timedelta(days=value)
+    if unit == 's': return now - timedelta(seconds=value)
+    if unit == 'm': return now - timedelta(minutes=value)
+    if unit == 'h': return now - timedelta(hours=value)
+    if unit == 'd': return now - timedelta(days=value)
 
     return None
 
@@ -92,60 +81,23 @@ def main(
     log_file: Annotated[Optional[Path], typer.Argument(help="Path to the log file (leave empty to read from STDIN via pipe)")] = None,
     follow: Annotated[bool, typer.Option("--follow", "-f", help="Follow log output in real-time (like tail -f)")] = False,
     level: Annotated[Optional[str], typer.Option("--level", "-l", help="Filter by level; comma-separated for multiple (e.g. ERROR,WARN,INFO)")] = None,
-    min_level: Annotated[
-        Optional[str],
-        typer.Option(
-            "--min-level",
-            help="Minimum severity (TRACE..FATAL): shows that level and everything more severe; do not combine with --level",
-        ),
-    ] = None,
     search: Annotated[Optional[str], typer.Option("--search", "-s", help="Search string to filter logs (substring unless --regex)")] = None,
     dashboard: Annotated[bool, typer.Option("--dashboard", "-d", help="Open visual dashboard showing log statistics")] = False,
-    pulse: Annotated[bool, typer.Option("--pulse", help="Full-screen live stream with Signal Deck (rate, health %, sparkline); not with --dashboard")] = False,
     export_html: Annotated[Optional[Path], typer.Option("--export-html", help="Export the beautiful log output to an HTML file")] = None,
     line_numbers: Annotated[bool, typer.Option("--line-numbers", "-n", help="Show line numbers for each log message")] = False,
     since: Annotated[Optional[str], typer.Option("--since", help="Show logs since a point in time (e.g. '1h', '30m', '2026-01-01T00:00:00')")] = None,
     until: Annotated[Optional[str], typer.Option("--until", help="Show logs until a point in time")] = None,
-    theme: Annotated[Optional[str], typer.Option("--theme", "-t", help="Choose a theme for colors and emojis (default, neon, ocean, forest, minimal, spectra)")] = None,
+    theme: Annotated[Optional[str], typer.Option("--theme", "-t", help="Choose a theme for colors and emojis (default, neon, ocean, forest, minimal)")] = None,
     use_regex: Annotated[bool, typer.Option("--regex", "-e", help="Treat --search as a regular expression")] = False,
     case_sensitive: Annotated[bool, typer.Option("--case-sensitive", help="Case-sensitive substring or regex search")] = False,
     invert_match: Annotated[bool, typer.Option("--invert-match", "-v", help="Hide lines that match --search (grep -v)")] = False,
     no_color: Annotated[bool, typer.Option("--no-color", help="Disable colors and terminal highlighting")] = False,
-    version: Annotated[bool, typer.Option("--version", "-V", help="Show version and exit")] = False,
+    highlight: Annotated[Optional[str], typer.Option("--highlight", "-H", help="Highlight specific keyword in log messages (can be used multiple times)")] = None,
+    highlight_color: Annotated[str, typer.Option("--highlight-color", help="Rich style for highlighted keywords (default: bold magenta)")] = "bold magenta",
 ):
     """
     [blue]LogScope[/blue] parses standard logs and makes them [bold]beautiful[/bold] and [bold]readable[/bold].
     """
-    if version:
-        try:
-            from importlib.metadata import version as pkg_version
-
-            v = pkg_version("logscope")
-        except Exception:
-            v = "0.2.0"
-        typer.echo(f"logscope {v}")
-        raise typer.Exit(0)
-
-    if min_level and level:
-        typer.echo("❌ Error: use either --level or --min-level, not both.", err=True)
-        raise typer.Exit(1)
-    if pulse and dashboard:
-        typer.echo("❌ Error: --pulse and --dashboard cannot be used together.", err=True)
-        raise typer.Exit(1)
-    if pulse and export_html:
-        typer.echo("❌ Error: --pulse cannot be used with --export-html.", err=True)
-        raise typer.Exit(1)
-
-    min_idx = None
-    if min_level:
-        min_idx = parse_min_level(min_level)
-        if min_idx is None:
-            typer.echo(
-                f"❌ Error: invalid --min-level (use one of: {', '.join(LEVEL_ORDER)}).",
-                err=True,
-            )
-            raise typer.Exit(1)
-
     if use_regex and not search:
         typer.echo("❌ Error: --regex requires --search.", err=True)
         raise typer.Exit(1)
@@ -181,7 +133,7 @@ def main(
     # Inform user about themes only if they are using default and haven't hidden the tip by having a config
     has_config = Path(".logscoperc").exists() or (Path.home() / ".logscoperc").exists()
     if not theme and not has_config:
-        manager.console.print("[dim]💡 Tip: Use '--theme' or create a '.logscoperc' file to change colors. Themes: neon, ocean, forest, minimal, spectra[/dim]\n")
+        manager.console.print("[dim]💡 Tip: Use '--theme' or create a '.logscoperc' file to change colors. Themes: neon, ocean, forest, minimal[/dim]\n")
 
     try:
         if dashboard:
@@ -197,22 +149,8 @@ def main(
                 search_pattern=search_pattern,
                 case_sensitive=case_sensitive,
                 invert_match=invert_match,
-                min_idx=min_idx,
-            )
-        elif pulse:
-            run_pulse_stream(
-                file_obj,
-                follow=follow,
-                level=level,
-                search=search,
-                show_line_numbers=line_numbers,
-                since=since_dt,
-                until=until_dt,
-                use_regex=use_regex,
-                search_pattern=search_pattern,
-                case_sensitive=case_sensitive,
-                invert_match=invert_match,
-                min_idx=min_idx,
+                highlight=highlight,
+                highlight_color=highlight_color,
             )
         else:
             stream_logs(
@@ -228,7 +166,8 @@ def main(
                 search_pattern=search_pattern,
                 case_sensitive=case_sensitive,
                 invert_match=invert_match,
-                min_idx=min_idx,
+                highlight=highlight,
+                highlight_color=highlight_color,
             )
     finally:
         if log_file is not None:

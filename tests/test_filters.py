@@ -1,12 +1,6 @@
 import re
 
-from logscope.viewer import (
-    line_passes_level,
-    line_passes_search,
-    parse_level_filter,
-    parse_min_level,
-    line_passes_min_level,
-)
+from logscope.viewer import line_passes_level, line_passes_search, parse_level_filter
 
 
 def test_parse_level_filter_single():
@@ -52,17 +46,3 @@ def test_line_passes_search_invert():
 
 def test_line_passes_search_no_search_always_passes():
     assert line_passes_search("anything", None, pattern=None, use_regex=False, case_sensitive=False, invert_match=True) is True
-
-
-def test_parse_min_level():
-    assert parse_min_level("warn") == parse_min_level("WARN")
-    assert parse_min_level(None) is None
-    assert parse_min_level("bogus") is None
-
-
-def test_line_passes_min_level():
-    idx = parse_min_level("WARN")
-    assert line_passes_min_level("INFO", idx) is False
-    assert line_passes_min_level("WARN", idx) is True
-    assert line_passes_min_level("ERROR", idx) is True
-    assert line_passes_min_level("UNKNOWN", idx) is True
