@@ -58,7 +58,7 @@ class LogScopeManager:
             no_color=no_color,
         )
 
-    def format_log(self, entry: LogEntry, line_number: Optional[int] = None, highlight: Optional[str] = None, highlight_color: str = "bold magenta") -> Text:
+    def format_log(self, entry: LogEntry, line_number: Optional[int] = None, highlight: Optional[str] = None, highlight_color: str = "bold magenta", case_sensitive: bool = False) -> Text:
         """Format a log entry with current theme's colors and emojis."""
         icon, style = self.level_mapping.get(entry.level, self.level_mapping.get("UNKNOWN", ("⚪", "dim white")))
 
@@ -74,17 +74,26 @@ class LogScopeManager:
             keyword = highlight.strip()
             if self._no_color:
                 text.append(message)
-            else:
-                # Split message by keyword (case-insensitive) and apply style
+            elif case_sensitive:
+                # Case-sensitive: simple split
                 parts = message.split(keyword)
                 if len(parts) > 1:
-                    # Reconstruct with styled keyword
                     for i, part in enumerate(parts):
                         text.append(part)
                         if i < len(parts) - 1:
                             text.append(keyword, style=highlight_color)
                 else:
                     text.append(message)
+            else:
+                # Case-insensitive: use regex to find matches and preserve original case
+                import re
+                pattern = re.compile(re.escape(keyword), re.IGNORECASE)
+                last_end = 0
+                for match in pattern.finditer(message):
+                    text.append(message[last_end:match.start()])
+                    text.append(match.group(), style=highlight_color)
+                    last_end = match.end()
+                text.append(message[last_end:])
         else:
             text.append(entry.message)
 
@@ -232,6 +241,7 @@ def stream_logs(
                 line_number=line_count if show_line_numbers else None,
                 highlight=highlight,
                 highlight_color=highlight_color,
+                case_sensitive=case_sensitive,
             )
             manager.console.print(formatted)
     finally:
@@ -346,6 +356,7 @@ def run_dashboard(
                     line_number=total_processed if show_line_numbers else None,
                     highlight=highlight,
                     highlight_color=highlight_color,
+                    case_sensitive=case_sensitive,
                 )
                 recent_logs.append(formatted)
                 if len(recent_logs) > MAX_LOGS:
