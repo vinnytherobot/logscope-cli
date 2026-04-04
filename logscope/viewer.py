@@ -101,11 +101,6 @@ def parse_level_filter(level: Optional[str]) -> Optional[Set[str]]:
     return parts or None
 
 
-def _normalize_level_token(token: str) -> str:
-    """Deprecated: use _normalize_level from parser instead."""
-    return _normalize_level(token.strip())
-
-
 def line_passes_level(entry_level: str, allowed: Optional[Set[str]]) -> bool:
     if not allowed:
         return True
