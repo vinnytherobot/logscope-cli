@@ -23,9 +23,11 @@
 *   **Colored & Structured Logs**: Automatically identifies `INFO`, `WARNING`, `ERROR`, `CRITICAL`, and `DEBUG`, applying beautiful typography.
 *   **Universal Parser**: Reads typical bracket logs (`[INFO]`) **and** parses modern NDJSON / JSON logs out of the box (e.g., Kubernetes, Docker).
 *   **Auto-Highlighting**: Magically highlights `IPs`, `URLs`, `Dates/Timestamps`, `UUIDs`, and `E-Mails` with dynamic colors.
+*   **Custom Keyword Highlighting**: Highlight specific keywords in log messages with `--highlight` and customize colors with `--highlight-color`.
 *   **Live Dashboard**: Watch logs stream in real-time alongside a live statistics panel keeping track of Error vs Info counts (`--dashboard`).
 *   **HTML Export**: Loved your console output so much you want to share it? Export the beautiful log structure directly to an HTML file to share with your team! (`--export-html results.html`)
 *   **Filtering**: Filter by one or more levels (`--level ERROR` or `--level ERROR,WARN,INFO`). Search by substring (`--search`) or regular expression (`--regex` / `-e`), with optional **case-sensitive** matching and **invert match** (`--invert-match` / `-v`, grep-style) to hide matching lines.
+*   **Themes**: Choose from 6 beautiful themes (`default`, `neon`, `ocean`, `forest`, `minimal`, `spectra`) or create custom themes via config file.
 *   **Plain output**: Use `--no-color` when you need unstyled text (e.g. piping to other tools or logs without ANSI codes).
 *   **Gzip logs**: Read `.gz` files directly—LogScope opens them as text without a manual `zcat` pipe.
 
@@ -78,6 +80,9 @@ logscope noisy.log --search "healthcheck" --invert-match
 # Case-sensitive search
 logscope app.log --search "UserID" --case-sensitive
 
+# Highlight specific keywords
+logscope server.log --highlight "timeout" --highlight-color "bold red"
+
 # No colors (plain terminal output)
 logscope app.log --no-color
 
@@ -106,6 +111,28 @@ Need to attach the logs to a Jira ticket or Slack message but want to keep the f
 
 ```bash
 logscope failed_job.log --export-html bug_report.html
+```
+
+### Themes
+Choose from 6 beautiful themes: `default`, `neon`, `ocean`, `forest`, `minimal`, `spectra`.
+
+```bash
+logscope app.log --theme neon
+```
+
+Create a `.logscoperc` file to set your preferred theme:
+
+```json
+{
+  "theme": "neon",
+  "custom_themes": {
+    "my-theme": {
+      "levels": {
+        "ERROR": ("✖", "bold red")
+      }
+    }
+  }
+}
 ```
 
 ---
