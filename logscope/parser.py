@@ -4,6 +4,19 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Tuple
 
+# Compiled regex patterns for performance
+_BRACKET_LEVEL_PATTERN = re.compile(
+    r'\[(TRACE|DEBUG|INFO|NOTICE|WARN|WARNING|ERROR|ERR|CRITICAL|ALERT|FATAL|EMERGENCY)\]',
+    re.IGNORECASE
+)
+_BRACKETLESS_LEVEL_PATTERN = re.compile(
+    r'\b(TRACE|DEBUG|INFO|NOTICE|WARN|WARNING|ERROR|ERR|CRITICAL|ALERT|FATAL|EMERGENCY)\b',
+    re.IGNORECASE
+)
+_TIMESTAMP_PATTERN = re.compile(
+    r'(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)'
+)
+
 @dataclass
 class LogEntry:
     level: str
@@ -101,10 +114,10 @@ def parse_line(line: str) -> LogEntry:
             pass
 
     # 2. Try typical log formats like [INFO], (WARN), ERROR:
-    match = re.search(r'\[(TRACE|DEBUG|INFO|NOTICE|WARN|WARNING|ERROR|ERR|CRITICAL|ALERT|FATAL|EMERGENCY)\]', line, re.IGNORECASE)
+    match = _BRACKET_LEVEL_PATTERN.search(line)
     if not match:
         # Try finding without brackets as a fallback, e.g. "INFO:" or "INFO - "
-        match = re.search(r'\b(TRACE|DEBUG|INFO|NOTICE|WARN|WARNING|ERROR|ERR|CRITICAL|ALERT|FATAL|EMERGENCY)\b', line, re.IGNORECASE)
+        match = _BRACKETLESS_LEVEL_PATTERN.search(line)
 
     if match:
         level = _normalize_level(match.group(1))
@@ -123,8 +136,7 @@ def parse_line(line: str) -> LogEntry:
 
 def extract_timestamp(text: str) -> Optional[datetime]:
     """Helper to extract a timestamp from a raw string using regex."""
-    pattern = r"(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)"
-    match = re.search(pattern, text)
+    match = _TIMESTAMP_PATTERN.search(text)
     if match:
         try:
             return datetime.fromisoformat(match.group(1).replace('Z', '+00:00'))
