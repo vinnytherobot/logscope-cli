@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 from typing import Optional
 from typing_extensions import Annotated
 from .viewer import stream_logs, run_dashboard, manager
-from .themes import DEFAULT_THEMES
 
 app = typer.Typer(
     help="LogScope — Beautiful log viewer for the terminal",
@@ -76,9 +75,13 @@ def load_theme(requested_theme: Optional[str], no_color: bool = False):
         requested_theme = config.get("theme", "default")
 
     if "custom_themes" in config:
-        DEFAULT_THEMES.update(config["custom_themes"])
-
-    manager.apply_theme(requested_theme, no_color=no_color)
+        # Merge custom themes into a copy of DEFAULT_THEMES to avoid mutating the module global
+        from .themes import DEFAULT_THEMES
+        themes_copy = dict(DEFAULT_THEMES)
+        themes_copy.update(config["custom_themes"])
+        manager.apply_theme(requested_theme, custom_themes=themes_copy, no_color=no_color)
+    else:
+        manager.apply_theme(requested_theme, no_color=no_color)
 
 @app.command()
 def main(

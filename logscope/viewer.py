@@ -42,10 +42,11 @@ class LogScopeManager:
         self._no_color = False
         self.apply_theme(theme_name)
 
-    def apply_theme(self, theme_name_or_dict, no_color: bool = False):
+    def apply_theme(self, theme_name_or_dict, no_color: bool = False, custom_themes: Optional[dict] = None):
         self._no_color = no_color
+        themes = custom_themes if custom_themes is not None else DEFAULT_THEMES
         if isinstance(theme_name_or_dict, str):
-            theme_config = DEFAULT_THEMES.get(theme_name_or_dict, DEFAULT_THEMES["default"])
+            theme_config = themes.get(theme_name_or_dict, themes["default"])
         else:
             theme_config = theme_name_or_dict
 
@@ -133,6 +134,38 @@ def line_passes_search(
     return matched
 
 
+def line_passes_filters(
+    entry: LogEntry,
+    level_set: Optional[Set[str]],
+    search: Optional[str],
+    since: Optional[datetime],
+    until: Optional[datetime],
+    *,
+    pattern: Optional[Pattern[str]],
+    use_regex: bool,
+    case_sensitive: bool,
+    invert_match: bool,
+) -> bool:
+    """Check if an entry passes all filters (level, search, timestamp)."""
+    if not line_passes_level(entry.level, level_set):
+        return False
+    if not line_passes_search(
+        entry.raw,
+        search,
+        pattern=pattern,
+        use_regex=use_regex,
+        case_sensitive=case_sensitive,
+        invert_match=invert_match,
+    ):
+        return False
+    if entry.timestamp:
+        if since and entry.timestamp.replace(tzinfo=None) < since.replace(tzinfo=None):
+            return False
+        if until and entry.timestamp.replace(tzinfo=None) > until.replace(tzinfo=None):
+            return False
+    return True
+
+
 def get_lines(file: TextIO, follow: bool):
     """Generator that yields lines from a file, optionally tailing it."""
     # yield existing lines
@@ -186,24 +219,18 @@ def stream_logs(
             line_count += 1
             entry = parse_line(line)
 
-            if not line_passes_level(entry.level, level_set):
-                continue
-
-            if not line_passes_search(
-                line,
+            if not line_passes_filters(
+                entry,
+                level_set,
                 search,
+                since,
+                until,
                 pattern=search_pattern,
                 use_regex=use_regex,
                 case_sensitive=case_sensitive,
                 invert_match=invert_match,
             ):
                 continue
-
-            if entry.timestamp:
-                if since and entry.timestamp.replace(tzinfo=None) < since.replace(tzinfo=None):
-                    continue
-                if until and entry.timestamp.replace(tzinfo=None) > until.replace(tzinfo=None):
-                    continue
                 
             formatted = manager.format_log(
                 entry,
@@ -301,11 +328,12 @@ def run_dashboard(
             for line in get_lines(file, follow):
                 entry = parse_line(line)
 
-                if not line_passes_level(entry.level, level_set):
-                    continue
-                if not line_passes_search(
-                    line,
+                if not line_passes_filters(
+                    entry,
+                    level_set,
                     search_filter,
+                    since,
+                    until,
                     pattern=search_pattern,
                     use_regex=use_regex,
                     case_sensitive=case_sensitive,
@@ -313,12 +341,6 @@ def run_dashboard(
                 ):
                     continue
 
-                if entry.timestamp:
-                    if since and entry.timestamp.replace(tzinfo=None) < since.replace(tzinfo=None):
-                        continue
-                    if until and entry.timestamp.replace(tzinfo=None) > until.replace(tzinfo=None):
-                        continue
-                    
                 # Update stats tally
                 total_processed += 1
                 entry_level = entry.level if entry.level in stats else "UNKNOWN"
