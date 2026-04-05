@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-04-05
+
+### Added
+
+- `--min-level` threshold filter to show logs at or above a specified level
+- Python 3.9-3.12 CI matrix testing
+- Coverage threshold configuration (`fail_under = 70`)
+- Pre-commit hooks with ruff-format
+- Improved timestamp parsing supporting:
+  - ISO 8601 with various timezone formats
+  - Common Log Format (Apache)
+  - Syslog-style timestamps
+  - Unix timestamps
+
+### Documentation
+
+- Removed references to non-existent `--pulse` flag in documentation
+- Updated issue templates to reference existing `--dashboard` functionality
+
 ## [0.3.1] - 2026-04-04
 
 ### Fixed
