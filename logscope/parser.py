@@ -13,9 +13,26 @@ _BRACKETLESS_LEVEL_PATTERN = re.compile(
     r'\b(TRACE|DEBUG|INFO|NOTICE|WARN|WARNING|ERROR|ERR|CRITICAL|ALERT|FATAL|EMERGENCY)\b',
     re.IGNORECASE
 )
-_TIMESTAMP_PATTERN = re.compile(
-    r'(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)'
-)
+
+# Multiple timestamp patterns for different log formats
+_TIMESTAMP_PATTERNS = [
+    # ISO 8601: 2026-03-21T10:00:00Z or 2026-03-21T10:00:00.123Z or 2026-03-21T10:00:00+00:00
+    re.compile(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)'),
+    # ISO-like with space: 2026-03-21 10:00:00 or 2026-03-21 10:00:00.123
+    re.compile(r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?)'),
+    # Common Log Format / Apache: 21/Mar/2026:10:00:00 +0000 or [21/Mar/2026:10:00:00 +0000]
+    re.compile(r'(\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}(?:\s+[+-]\d{4})?)'),
+    # Syslog-style: Mar 21 10:00:00 (year is assumed current year)
+    re.compile(r'([A-Za-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})'),
+    # Unix timestamp: 1711054800 (10 digits for seconds)
+    re.compile(r'\b(\d{10})\b'),
+]
+
+# Month name mapping for parsing
+_MONTH_MAP = {
+    'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+    'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+}
 
 @dataclass
 class LogEntry:
@@ -135,11 +152,37 @@ def parse_line(line: str) -> LogEntry:
     return LogEntry(level="UNKNOWN", message=line, raw=line, timestamp=extract_timestamp(line))
 
 def extract_timestamp(text: str) -> Optional[datetime]:
-    """Helper to extract a timestamp from a raw string using regex."""
-    match = _TIMESTAMP_PATTERN.search(text)
-    if match:
-        try:
-            return datetime.fromisoformat(match.group(1).replace('Z', '+00:00'))
-        except ValueError:
-            return None
+    """Extract a timestamp from a raw string using multiple format patterns."""
+    for pattern in _TIMESTAMP_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            ts_str = match.group(1)
+            try:
+                # Try ISO format first (handles most cases)
+                if '-' in ts_str and ('T' in ts_str or ' ' in ts_str[:10]):
+                    # Handle ISO-like with space instead of T
+                    return datetime.fromisoformat(ts_str.replace('Z', '+00:00').replace(' ', 'T'))
+                # Handle Common Log Format: 21/Mar/2026:10:00:00 +0000
+                elif '/' in ts_str:
+                    parts = ts_str.split()
+                    main_part = parts[0]
+                    # Parse: DD/Mon/YYYY:HH:MM:SS
+                    match_parts = re.match(r'(\d{2})/([A-Za-z]{3})/(\d{4}):(\d{2}):(\d{2}):(\d{2})', main_part)
+                    if match_parts:
+                        day, month_str, year, hour, minute, second = match_parts.groups()
+                        month = _MONTH_MAP.get(month_str, 1)
+                        return datetime(int(year), month, int(day), int(hour), int(minute), int(second))
+                # Handle Syslog-style: Mar 21 10:00:00
+                elif ts_str[0].isalpha():
+                    match_parts = re.match(r'([A-Za-z]{3})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})', ts_str)
+                    if match_parts:
+                        month_str, day, hour, minute, second = match_parts.groups()
+                        month = _MONTH_MAP.get(month_str, 1)
+                        year = datetime.now().year  # Assume current year
+                        return datetime(year, month, int(day), int(hour), int(minute), int(second))
+                # Handle Unix timestamp
+                elif ts_str.isdigit():
+                    return datetime.fromtimestamp(int(ts_str))
+            except (ValueError, OSError):
+                continue
     return None
