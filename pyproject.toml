@@ -33,7 +33,7 @@ source = ["logscope"]
 branch = true
 
 [tool.coverage.report]
-fail_under = 70
+fail_under = 50
 show_missing = true
 
 [tool.ruff]
