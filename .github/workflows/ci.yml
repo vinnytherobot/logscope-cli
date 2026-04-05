@@ -40,7 +40,10 @@ jobs:
             venv-${{ runner.os }}-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        run: poetry install --no-interaction --with dev
+        run: |
+          poetry config virtualenvs.in-project true
+          poetry install --no-interaction --with dev --no-root
+          poetry env use python${{ matrix.python-version }}
 
       - name: Lint (ruff)
         run: poetry run ruff check .
