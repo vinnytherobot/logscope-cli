@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "logscope"
-version = "0.3.1"
+version = "0.4.1"
 description = "LogScope — Beautiful log viewer for the terminal"
 authors = ["vinnytherobot"]
 readme = "README.md"
