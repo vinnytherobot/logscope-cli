@@ -159,7 +159,7 @@ def extract_timestamp(text: str) -> Optional[datetime]:
             ts_str = match.group(1)
             try:
                 # Try ISO format first (handles most cases)
-                if '-' in ts_str and ('T' in ts_str or ' ' in ts_str[:10]):
+                if '-' in ts_str and ('T' in ts_str or ts_str[10:11] == ' '):
                     # Handle ISO-like with space instead of T
                     return datetime.fromisoformat(ts_str.replace('Z', '+00:00').replace(' ', 'T'))
                 # Handle Common Log Format: 21/Mar/2026:10:00:00 +0000
