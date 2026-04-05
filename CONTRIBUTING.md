@@ -39,7 +39,7 @@ Use prefixes:
 
 Examples:
 
-- `feat/pulse-health-window`
+- `feat/dashboard-improvements`
 - `fix/windows-stdin-encoding`
 - `docs/release-process`
 
@@ -49,7 +49,7 @@ LogScope uses Conventional Commits:
 
 - `feat(cli): add --min-level support`
 - `fix(parser): normalize EMERGENCY to FATAL`
-- `docs(readme): add pulse examples`
+- `docs(readme): add min-level examples`
 - `chore(ci): pin GitHub Actions versions`
 
 Recommended format:

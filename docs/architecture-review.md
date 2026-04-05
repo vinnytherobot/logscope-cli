@@ -66,7 +66,7 @@ logscope/
 
 - Clear package boundary in `logscope/` with focused modules (`cli`, `parser`, `viewer`, `themes`).
 - Tests already split by concern (`parser`, `filters`, `time`).
-- CLI has practical user features (streaming, dashboard, pulse, filtering, gzip, export).
+- CLI has practical user features (streaming, dashboard, filtering, gzip, export).
 - Commit history already follows a recognizable convention.
 
 ### Critical gaps addressed
@@ -93,7 +93,7 @@ logscope/
 │   └── logscope/
 │       ├── core/          -> parsing and filtering business logic
 │       ├── adapters/      -> input/output channels (stdin/file/html/follow)
-│       ├── ui/            -> rich rendering, dashboard, pulse widgets
+│       ├── ui/            -> rich rendering, dashboard widgets
 │       ├── types/         -> stable public dataclasses/protocols
 │       └── cli/           -> Typer command wiring and argument handling
 ├── tests/
@@ -138,4 +138,4 @@ logscope/
 
 - [ ] Migrate package to `src/` layout incrementally (8h, maintainer, potential breaking change for imports if not carefully mapped, depends on CI)
 - [ ] Split `viewer.py` into `ui/` + `adapters/` modules (10h, maintainer, no breaking change if CLI contract remains, depends on src migration)
-- [ ] Expand integration test coverage for follow/pulse/export flows (6h, any contributor, no breaking change, depends on module split)
+- [ ] Expand integration test coverage for follow/export flows (6h, any contributor, no breaking change, depends on module split)

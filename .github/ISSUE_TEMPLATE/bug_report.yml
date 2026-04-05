@@ -8,7 +8,7 @@ body:
     attributes:
       label: Description
       description: What happened?
-      placeholder: LogScope exits when running with --pulse on Windows Terminal.
+      placeholder: LogScope exits when running with --dashboard --follow on Windows Terminal.
     validations:
       required: true
 

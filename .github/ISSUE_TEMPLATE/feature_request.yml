@@ -8,7 +8,7 @@ body:
     attributes:
       label: Problem this solves
       description: What user pain are you trying to solve?
-      placeholder: I cannot quickly identify top noisy services in pulse mode.
+      placeholder: I cannot quickly identify top noisy services in dashboard mode.
     validations:
       required: true
 
