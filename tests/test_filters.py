@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from logscope.viewer import line_passes_level, line_passes_search, parse_level_filter, line_passes_filters, line_passes_min_level
 from logscope.parser import LogEntry
