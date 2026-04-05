@@ -16,6 +16,21 @@ from rich.theme import Theme
 from .parser import parse_line, LogEntry, _normalize_level
 from .themes import DEFAULT_THEMES
 
+# Level severity order (lowest to highest)
+# Used for --min-level threshold filtering
+LEVEL_ORDER = {
+    "TRACE": 0,
+    "DEBUG": 1,
+    "INFO": 2,
+    "NOTICE": 3,
+    "WARN": 4,
+    "ERROR": 5,
+    "CRITICAL": 6,
+    "ALERT": 7,
+    "FATAL": 8,
+    "UNKNOWN": 0,  # Treat as lowest
+}
+
 if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -116,6 +131,15 @@ def line_passes_level(entry_level: str, allowed: Optional[Set[str]]) -> bool:
     return entry_level in allowed
 
 
+def line_passes_min_level(entry_level: str, min_level: Optional[str]) -> bool:
+    """Check if entry level meets minimum severity threshold."""
+    if not min_level:
+        return True
+    entry_severity = LEVEL_ORDER.get(entry_level, 0)
+    min_severity = LEVEL_ORDER.get(_normalize_level(min_level), 0)
+    return entry_severity >= min_severity
+
+
 def line_passes_search(
     line: str,
     search: Optional[str],
@@ -149,9 +173,12 @@ def line_passes_filters(
     use_regex: bool,
     case_sensitive: bool,
     invert_match: bool,
+    min_level: Optional[str] = None,
 ) -> bool:
-    """Check if an entry passes all filters (level, search, timestamp)."""
+    """Check if an entry passes all filters (level, min_level, search, timestamp)."""
     if not line_passes_level(entry.level, level_set):
+        return False
+    if not line_passes_min_level(entry.level, min_level):
         return False
     if not line_passes_search(
         entry.raw,
@@ -213,6 +240,7 @@ def stream_logs(
     invert_match: bool = False,
     highlight: Optional[str] = None,
     highlight_color: str = "bold magenta",
+    min_level: Optional[str] = None,
 ):
     """Basic console mode: prints directly to stdout, supporting tails."""
     if export_html:
@@ -236,6 +264,7 @@ def stream_logs(
                 use_regex=use_regex,
                 case_sensitive=case_sensitive,
                 invert_match=invert_match,
+                min_level=min_level,
             ):
                 continue
                 
@@ -268,6 +297,7 @@ def run_dashboard(
     invert_match: bool = False,
     highlight: Optional[str] = None,
     highlight_color: str = "bold magenta",
+    min_level: Optional[str] = None,
 ):
     """Dashboard mode: Shows a summary stats panel and recent logs layout."""
 
@@ -347,6 +377,7 @@ def run_dashboard(
                     use_regex=use_regex,
                     case_sensitive=case_sensitive,
                     invert_match=invert_match,
+                    min_level=min_level,
                 ):
                     continue
 

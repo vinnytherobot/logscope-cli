@@ -5,7 +5,10 @@
       "Bash(python:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(pip list:*)",
+      "Bash(pytest -q)",
+      "Bash(ruff check:*)"
     ]
   }
 }

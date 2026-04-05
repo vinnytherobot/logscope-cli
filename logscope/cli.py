@@ -88,6 +88,7 @@ def main(
     log_file: Annotated[Optional[Path], typer.Argument(help="Path to the log file (leave empty to read from STDIN via pipe)")] = None,
     follow: Annotated[bool, typer.Option("--follow", "-f", help="Follow log output in real-time (like tail -f)")] = False,
     level: Annotated[Optional[str], typer.Option("--level", "-l", help="Filter by level; comma-separated for multiple (e.g. ERROR,WARN,INFO)")] = None,
+    min_level: Annotated[Optional[str], typer.Option("--min-level", "-m", help="Show logs at or above this level threshold (e.g. WARN shows WARN, ERROR, CRITICAL, ALERT, FATAL)")] = None,
     search: Annotated[Optional[str], typer.Option("--search", "-s", help="Search string to filter logs (substring unless --regex)")] = None,
     dashboard: Annotated[bool, typer.Option("--dashboard", "-d", help="Open visual dashboard showing log statistics")] = False,
     export_html: Annotated[Optional[Path], typer.Option("--export-html", help="Export the beautiful log output to an HTML file")] = None,
@@ -158,6 +159,7 @@ def main(
                 invert_match=invert_match,
                 highlight=highlight,
                 highlight_color=highlight_color,
+                min_level=min_level,
             )
         else:
             stream_logs(
@@ -175,6 +177,7 @@ def main(
                 invert_match=invert_match,
                 highlight=highlight,
                 highlight_color=highlight_color,
+                min_level=min_level,
             )
     finally:
         if log_file is not None:

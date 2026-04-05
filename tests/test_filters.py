@@ -1,7 +1,7 @@
 import re
 from datetime import datetime, timedelta
 
-from logscope.viewer import line_passes_level, line_passes_search, parse_level_filter, line_passes_filters
+from logscope.viewer import line_passes_level, line_passes_search, parse_level_filter, line_passes_filters, line_passes_min_level
 from logscope.parser import LogEntry
 
 
@@ -121,3 +121,49 @@ def test_line_passes_filters_exact_boundary():
 
     # Exact until should pass (inclusive)
     assert line_passes_filters(entry, None, None, None, entry_time, pattern=None, use_regex=False, case_sensitive=False, invert_match=False) is True
+
+
+def test_line_passes_min_level_threshold():
+    """Test --min-level threshold filtering."""
+    # TRACE is lowest, FATAL is highest
+    assert line_passes_min_level("TRACE", None) is True
+    assert line_passes_min_level("TRACE", "TRACE") is True
+    assert line_passes_min_level("TRACE", "DEBUG") is False
+    assert line_passes_min_level("ERROR", "WARN") is True
+    assert line_passes_min_level("ERROR", "ERROR") is True
+    assert line_passes_min_level("ERROR", "CRITICAL") is False
+    assert line_passes_min_level("FATAL", "ERROR") is True
+    assert line_passes_min_level("FATAL", "FATAL") is True
+    assert line_passes_min_level("INFO", "DEBUG") is True
+
+
+def test_line_passes_min_level_unknown_level():
+    """Test that UNKNOWN level is treated as lowest severity (same as TRACE)."""
+    assert line_passes_min_level("UNKNOWN", None) is True
+    # UNKNOWN has same severity as TRACE (0), so it passes TRACE threshold
+    assert line_passes_min_level("UNKNOWN", "TRACE") is True
+    # But fails higher thresholds
+    assert line_passes_min_level("UNKNOWN", "DEBUG") is False
+    assert line_passes_min_level("UNKNOWN", "INFO") is False
+
+
+def test_line_passes_min_level_case_insensitive():
+    """Test that min_level comparison is case-insensitive."""
+    assert line_passes_min_level("ERROR", "error") is True
+    assert line_passes_min_level("ERROR", "WaRn") is True
+    assert line_passes_min_level("INFO", "DEBUG") is True
+
+
+def test_line_passes_filters_with_min_level():
+    """Test --min-level combined with other filters."""
+    entry = make_entry(datetime(2026, 4, 5, 10, 0, 0), level="ERROR", message="error message")
+
+    # Combined with level filter - ERROR passes both ERROR level set and min_level WARN
+    assert line_passes_filters(entry, {"ERROR"}, None, None, None, pattern=None, use_regex=False, case_sensitive=False, invert_match=False, min_level="WARN") is True
+
+    # ERROR doesn't pass level filter for INFO only
+    assert line_passes_filters(entry, {"INFO"}, None, None, None, pattern=None, use_regex=False, case_sensitive=False, invert_match=False, min_level=None) is False
+
+    # Combined with time filter
+    since = datetime(2026, 4, 5, 9, 0, 0)
+    assert line_passes_filters(entry, None, None, since, None, pattern=None, use_regex=False, case_sensitive=False, invert_match=False, min_level="WARN") is True
