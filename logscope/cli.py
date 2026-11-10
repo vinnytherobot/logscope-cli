@@ -140,10 +140,17 @@ def main(
             raise typer.Exit(1)
         file_obj = sys.stdin
     else:
-        if log_file.suffix.lower() == ".gz":
-            file_obj = gzip.open(log_file, "rt", encoding="utf-8", errors="replace")
-        else:
-            file_obj = open(log_file, "r", encoding="utf-8", errors="replace")
+        if not log_file.exists():
+            typer.echo(f"Error: Log file not found: {log_file}", err=True)
+            raise typer.Exit(2)
+        try:
+            if log_file.suffix.lower() == ".gz":
+                file_obj = gzip.open(log_file, "rt", encoding="utf-8", errors="replace")
+            else:
+                file_obj = open(log_file, "r", encoding="utf-8", errors="replace")
+        except OSError as exc:
+            typer.echo(f"Error: Cannot read log file '{log_file}': {exc}", err=True)
+            raise typer.Exit(2)
 
     since_dt = parse_relative_time(since) if since else None
     until_dt = parse_relative_time(until) if until else None
